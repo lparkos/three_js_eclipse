@@ -1,107 +1,138 @@
-    // Set the scene size.
-    const WIDTH = window.innerWidth;
-    const HEIGHT = window.innerHeight;
+// Listen to window size
+window.addEventListener( 'resize', onWindowResize, false );
+// Resize the window
 
-    // Get the DOM element to attach to
-    const container = document.querySelector('#container');
+function onWindowResize(){
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize( window.innerWidth, window.innerHeight );
+}
 
-    // Options for GUI and settings
-    var options = {
-      velx: 0.4,
-      vely: 0.5,
-      camera: {
-        speed: 0.0001
-      },
-      stop: function() {
-      },
-      reset: function() {
-      }
-    };
+// Get the DOM element to attach to
+const container = document.querySelector('#container');
 
-    // Set Renderer Style
-    const renderer = new THREE.WebGLRenderer();
+// Set window properties
+const WIDTH = window.innerWidth;
+const HEIGHT = window.innerHeight;
 
-    // Camera Settings
-    const VIEW_ANGLE = 45;
-    const ASPECT = WIDTH / HEIGHT;
-    const NEAR = 0.1;
-    const FAR = 10000;
+// Renderer Settings
+const renderer = new THREE.WebGLRenderer();
 
-    //Set Camera
-    const camera = new THREE.PerspectiveCamera(
-          VIEW_ANGLE,
-          ASPECT,
-          NEAR,
-          FAR
-      );
-    const scene = new THREE.Scene();
+// Settings for DatGui
+let settings = {
+    posX: 200,
+    posY: 200,
+    posZ: 200,
+    spreadX: 400,
+    spreadY: 300,
+    spreadZ: 400,
+    rotation: .095,
+    speed: .0001,
+    color: "#960200",
+    density: 1,
+    decay: 2,
+    distance: 0.9,
+};
 
-    // Add the camera to the scene.
-    scene.add(camera);
+// Camera Settings
+const VIEW_ANGLE = 35;
+const ASPECT = WIDTH / HEIGHT;
+const NEAR = 50;
+const FAR = 20000;
 
-    // Start the renderer.
-    renderer.setSize(WIDTH, HEIGHT);
-    container.appendChild(renderer.domElement);
+// Camera Setup
+const camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+const scene = new THREE.Scene();
+scene.add(camera);
 
-    // New PointLight
-    const pointLight = new THREE.PointLight(0xFFFFFF);
-    // Positionint
-    pointLight.position.x = 10;
-    pointLight.position.y = 50;
-    pointLight.position.z = 130;
+// // Flying controls
+// // Set controls
+// controls = new THREE.FlyControls( camera );
+// controls.movementSpeed = 1000;
+// controls.domElement = container;
+// controls.rollSpeed = Math.PI / 24;
+// controls.autoForward = false;
+// controls.dragToLook = false;
 
-    scene.add(pointLight);
+// Sphere
+const RADIUS = 20;
+const SEGMENTS = 20;
+const RINGS = 40;
+const spheres = [];
 
-    // Material
-    const sphereMaterial =
-      new THREE.MeshLambertMaterial(
-        {
-          color: "#EFE9AE"
-        });
-    // Shape
-    const RADIUS = 20;
-    const SEGMENTS = 105;
-    const RINGS = 100;
-    // Mesh
-    const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(
-        RADIUS,
-        SEGMENTS,
-        RINGS),
-      sphereMaterial
-    );
+// Creating a group of spheres
+for ( var i = 0; i < 40 ; i++ ) {
 
-    sphere.position.z = 0;
-    sphere.position.y = 10;
-    sphere.rotation.x += options.velx;
-    sphere.rotation.y += options.vely;
+  let spreadX = THREE.Math.randFloatSpread(settings.spreadX);
+  let spreadY = THREE.Math.randFloatSpread(settings.spreadY);
+  let spreadZ = THREE.Math.randFloatSpread(settings.spreadZ);
 
-    scene.add(sphere);
+  // Sphere material settings
+  let sphereMaterial = new THREE.MeshLambertMaterial({ color: "#CDEAC0" });
+  // Wireframe properties
+  sphereMaterial.wireframe = true;
+  sphereMaterial.wireframeLinecap = "butt";
+  sphereMaterial.wireframeLinewidth = 50;
 
+  let sphere = new THREE.Mesh(new THREE.SphereGeometry(RADIUS,SEGMENTS,RINGS),sphereMaterial);
+  spheres.push( sphere );
+  scene.add( sphere );
 
-  // Render
-  var render = function() {
-    requestAnimationFrame(render);
-    var timer = Date.now() * options.camera.speed;
-    camera.position.x = Math.cos(timer) * 100;
-    camera.position.z = Math.sin(timer) * 100;
-    camera.lookAt(scene.position);
-    camera.updateMatrixWorld();
-    sphere.rotation.x += options.velx;
-    sphere.rotation.y += options.vely;
+  // Position each sphere
+  sphere.position.x = spreadX;
+  sphere.position.y = spreadY;
+  sphere.position.z = spreadZ;
 
-    renderer.render(scene, camera);
-  };
+}
 
-  render();
+// Pointlight Settings
+const COLOR = "#EFE9AE";
+const INTENSITY = settings.intensity;
+const DISTANCE = settings.distance;
+const DECAY = settings.decay;
 
-  // DAT.GUI Related Stuff
-  var gui = new dat.GUI();
-  gui.add(camera.position, 'y', 0, 100).listen();
-  gui.add(camera.position, 'x', 0, 100).listen();
-  gui.addColor(sphereMaterial, 'color').listen();
-  gui.add(pointLight.position, 'x', 0, 100).listen();
-  gui.add(pointLight.position, 'y', 0, 100).listen();
-  gui.add(pointLight.position, 'z', 0, 100).listen();
-  gui.add(sphere.rotation, 'x', 0, 100).listen();
-  gui.add(sphere.rotation, 'y', 0, 100).listen()
+// Setting up Pointlight
+const pointLight = new THREE.PointLight(COLOR, INTENSITY, DISTANCE, DECAY);
+pointLight.position.set( 100, 10, 10 );
+pointLight.castShadow = true;
+scene.add(pointLight);
+
+// Renderer settings
+let bgcolor = settings.color;
+renderer.setSize(WIDTH, HEIGHT);
+container.appendChild(renderer.domElement);
+renderer.setClearColor(bgcolor, 1);
+
+// Render
+var render = function() {
+  requestAnimationFrame(render);
+  var timer = Date.now() * settings.speed;
+
+  for ( var i = 0 ; i < 10 ; i++ ){
+    var sphere = spheres[i];
+    sphere.position.x += settings.spreadX;
+    sphere.position.y += settings.spreadY;
+    sphere.position.z += settings.spreadZ;
+  }
+
+  camera.position.x = Math.cos(timer) * settings.posX;
+  camera.position.y = Math.sin(timer) * settings.posY;
+  camera.position.z = Math.sin(timer) * settings.posZ;
+  renderer.setClearColor(settings.color, 1);
+  camera.lookAt(scene.position);
+  camera.updateMatrixWorld();
+  renderer.render(scene, camera);
+
+// controls.movementSpeed = 0.33;
+// controls.update();
+};
+render();
+
+// DAT.GUI Related Stuff
+var gui = new dat.GUI();
+gui.add(settings, 'posZ', -1000, 1000).name("Camera Z");
+gui.add(settings, 'posX', -1000, 1000).name("Camera X");
+gui.add(settings, 'posY', -1000, 1000).name("Camera Y");
+gui.add(settings, 'rotation', -1000, 1000).name("Rotate");
+gui.addColor(settings, 'color').name("Color");
+gui.add(pointLight.position, 'x', 0, 1000).name("PointLight");
